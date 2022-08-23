@@ -6,6 +6,7 @@ import (
 	"go_gin_gorm_mysql_crud_demo/model"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"strconv"
 )
 
 var DB *gorm.DB
@@ -71,9 +72,94 @@ func main() {
 				})
 			}
 		})
-		listGroup.GET("/")
-		listGroup.GET("/:id")
-		listGroup.PUT("/")
+		//改
+		listGroup.PUT("/:id", func(c *gin.Context) {
+			var list model.List
+			id := c.Param("id")
+			DB.Where("id = ?", id).First(&list)
+			if list.ID == 0 {
+				c.JSON(200, gin.H{
+					"code": 400,
+					"msg":  "用户id没有找到",
+				})
+				return
+			}
+			err := c.ShouldBindJSON(&list)
+			if err != nil {
+				c.JSON(200, gin.H{
+					"code": 400,
+					"msg":  "修改失败",
+				})
+				return
+			}
+			DB.Save(&list)
+			c.JSON(200, gin.H{
+				"code": 200,
+				"msg":  "修改成功",
+			})
+		})
+		//查
+		//条件查询
+		listGroup.GET("/:name", func(c *gin.Context) {
+			var lists []model.List
+			name := c.Param("name")
+			var total int64
+			DB.Where("name = ?", name).Find(&lists).Count(&total)
+			if len(lists) == 0 {
+				c.JSON(200, gin.H{
+					"msg":  "没有查询到数据",
+					"data": nil,
+					"code": 400,
+				})
+			} else {
+				c.JSON(200, gin.H{
+					"msg": "查询成功",
+					"data": gin.H{
+						"total": total,
+						"lists": lists,
+					},
+					"code": 200,
+				})
+			}
+		})
+		listGroup.GET("/", func(c *gin.Context) {
+			var dataList []model.List
+			//1,查询全部数据，查询分页数据
+			pageSize, _ := strconv.Atoi(c.Query("pageSize"))
+			pageNum, _ := strconv.Atoi(c.Query("pageNum"))
+			//判断是否要分页
+			if pageSize == 0 {
+				pageSize = -1
+			}
+			if pageNum == 0 {
+				pageNum = -1
+			}
+			offsetVal := (pageNum - 1) * pageSize
+			if pageSize == -1 {
+				offsetVal = -1
+			}
+			var total int64
+			DB.Model(dataList).Count(&total).Limit(pageSize).Offset(offsetVal).Find(&dataList)
+			if len(dataList) == 0 {
+				c.JSON(200, gin.H{
+					"msg":  "没有查询到数据",
+					"data": nil,
+					"code": 400,
+				})
+			} else {
+				c.JSON(200, gin.H{
+					"msg": "查询成功",
+					"data": gin.H{
+						"list":     dataList,
+						"total":    total,
+						"pageNum":  pageNum,
+						"pageSize": pageSize,
+					},
+					"code": 200,
+				})
+			}
+
+		})
 
 	}
 	r.Run()
