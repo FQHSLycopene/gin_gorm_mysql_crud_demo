@@ -99,26 +99,24 @@ func main() {
 			})
 		})
 		//查
-		//条件查询
+		//条件查询 模糊搜索
 		listGroup.GET("/:name", func(c *gin.Context) {
 			var lists []model.List
 			name := c.Param("name")
 			var total int64
-			DB.Where("name = ?", name).Find(&lists).Count(&total)
+			DB.Where("name LIKE ?", "%"+name+"%").Find(&lists).Count(&total)
 			if len(lists) == 0 {
 				c.JSON(200, gin.H{
-					"msg":  "没有查询到数据",
-					"data": nil,
-					"code": 400,
+					"data": gin.H{},
+					"code": 401,
 				})
 			} else {
 				c.JSON(200, gin.H{
-					"msg": "查询成功",
 					"data": gin.H{
 						"total": total,
-						"lists": lists,
+						"list":  lists,
 					},
-					"code": 200,
+					"code": 201,
 				})
 			}
 		})
@@ -155,7 +153,7 @@ func main() {
 						"pageNum":  pageNum,
 						"pageSize": pageSize,
 					},
-					"code": 200,
+					"code": 202,
 				})
 			}
 
